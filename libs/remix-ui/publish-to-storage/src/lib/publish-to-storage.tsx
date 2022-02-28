@@ -5,7 +5,7 @@ import { publishToIPFS } from './publishToIPFS'
 import { publishToSwarm } from './publishOnSwarm'
 
 export const PublishToStorage = (props: RemixUiPublishToStorageProps) => {
-  const { api, storage, contract, resetStorage } = props
+  const { api, storage, contract, resetStorage, filePath, compileTabLogic } = props
   const [state, setState] = useState({
     modal: {
       title: '',
@@ -44,6 +44,17 @@ export const PublishToStorage = (props: RemixUiPublishToStorageProps) => {
             modal(`Published ${contract.name}'s Metadata`, publishMessage(result.uploaded))
             // triggered each time there's a new verified publish (means hash correspond)
             api.writeFile('ipfs/' + result.item.hash, result.item.content)
+
+            // throw in ABI into contract
+            console.log("contract: ", contract);
+            console.log("filePath: ", filePath);
+
+            const solFile = await api.readFile(filePath);
+            const moddedSolFile = solFile.replace("ipfs.io/ipfs/AUTOGEN", "ipfs.io/ipfs/" + result.abi.hash);
+            api.writeFile(filePath, moddedSolFile);
+
+            const hhCompilation = api.getAppParameter('hardhat-compilation');
+            compileTabLogic.runCompiler(hhCompilation);
           } catch (err) {
             modal('IPFS Publish Failed', publishMessageFailed(storage, err))
           }

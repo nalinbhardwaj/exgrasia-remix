@@ -11,6 +11,7 @@ export const publishToIPFS = async (contract, api) => {
   const sources = []
   let metadata
   const item = { content: null, hash: null }
+  const abi = { content: null, hash: null }
   const uploaded = []
 
   try {
@@ -68,6 +69,29 @@ export const publishToIPFS = async (contract, api) => {
       throw new Error(error)
     }
   }))
+
+  const abiContent = JSON.stringify(metadata.output.abi)
+
+  try {
+    const result = await ipfsVerifiedPublish(abiContent, '')
+
+    try {
+      contract.metadataHash = result.url.match('dweb:/ipfs/(.+)')[1]
+    } catch (e) {
+      contract.metadataHash = '<Metadata inconsistency> - ABI.json'
+    }
+    abi.content = abiContent
+    abi.hash = contract.metadataHash
+    uploaded.push({
+      content: contract.metadata,
+      hash: contract.metadataHash,
+      filename: 'ABI.json',
+      output: result
+    })
+  } catch (error) {
+    throw new Error(error)
+  }
+
   const metadataContent = JSON.stringify(metadata)
 
   try {
@@ -90,7 +114,7 @@ export const publishToIPFS = async (contract, api) => {
     throw new Error(error)
   }
 
-  return { uploaded, item }
+  return { uploaded, item, abi }
 }
 
 const ipfsVerifiedPublish = async (content, expectedHash) => {

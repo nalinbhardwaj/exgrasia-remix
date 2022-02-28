@@ -269,7 +269,7 @@ export function RunTabUI (props: RunTabProps) {
       </div>
       <ModalDialog id='udappNotify' { ...focusModal } handleHide={ handleHideModal } />
       <Toaster message={focusToaster} handleHide={handleToaster} />
-      <PublishToStorage id='udapp' api={props.plugin} resetStorage={resetStorage} storage={publishData.storage} contract={publishData.contract} />
+      <PublishToStorage id='udapp' api={props.plugin} resetStorage={resetStorage} storage={publishData.storage} contract={publishData.contract} filePath={publishData.contract?.name} compileTabLogic={null} />
     </Fragment>
   )
 }

@@ -120,7 +120,7 @@ export const SolidityCompiler = (props: SolidityCompilerProps) => {
     <>
       <div id="compileTabView">
         <CompilerContainer api={api} isHardhatProject={state.isHardhatProject} compileTabLogic={compileTabLogic} tooltip={toast} modal={modal} compiledFileName={currentFile} updateCurrentVersion={updateCurrentVersion} configurationSettings={configurationSettings} />
-        <ContractSelection api={api} contractMap={contractMap} contractsDetails={contractsDetails} modal={modal} />
+        <ContractSelection api={api} contractMap={contractMap} contractsDetails={contractsDetails} modal={modal} compileTabLogic={compileTabLogic} />
         <div className="remixui_errorBlobs p-4" data-id="compiledErrors">
           <span data-id={`compilationFinishedWith_${currentVersion}`}></span>
           { compileErrors.error && <Renderer message={compileErrors.error.formattedMessage || compileErrors.error} plugin={api} opt={{ type: compileErrors.error.severity || 'error', errorType: compileErrors.error.type }} /> }

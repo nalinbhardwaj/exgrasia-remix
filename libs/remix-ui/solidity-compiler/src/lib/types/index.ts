@@ -22,5 +22,6 @@ export interface ContractSelectionProps {
     file: string
   } | Record<string, any>,
   modal: (title: string, message: string | JSX.Element, okLabel: string, okFn: () => void, cancelLabel?: string, cancelFn?: () => void) => void,
-  contractsDetails: Record<string, any>
+  contractsDetails: Record<string, any>,
+  compileTablogic: CompileTabLogic,
 }

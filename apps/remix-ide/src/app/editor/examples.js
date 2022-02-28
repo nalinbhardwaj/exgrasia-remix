@@ -14,7 +14,7 @@ interface ITileContract {
     function extendedAbi() external view returns (string memory);
 }
 
-contract StubTileContract is ITileContract {
+contract MyTileContract is ITileContract {
     function emoji() external pure override returns (string memory) {
         return unicode"🌃";
     }
@@ -39,26 +39,26 @@ pragma solidity ^0.8.4;
 import "remix_tests.sol"; // this import is automatically injected by Remix.
 import "../contracts/TileContract.sol";
 
-contract TileContractTest {
+contract MyTileContractTest {
    
     bytes32[] proposalNames;
    
-    StubTileContract stubTileContract;
+    MyTileContract myTileContract;
     function beforeAll () public {
-        stubTileContract = new StubTileContract();
+        myTileContract = new MyTileContract();
     }
     
     function checkName () public {
-        Assert.greaterThan(int(bytes(stubTileContract.name()).length), int(0), "name is not empty");
+        Assert.greaterThan(int(bytes(myTileContract.name()).length), int(0), "name is not empty");
     }
 
     function checkEmoji () public {
-        Assert.greaterThan(int(bytes(stubTileContract.emoji()).length), int(0), "emoji is not empty");
-        Assert.lesserThan(int(bytes(stubTileContract.emoji()).length), int(10), "emoji is not too long");
+        Assert.greaterThan(int(bytes(myTileContract.emoji()).length), int(0), "emoji is not empty");
+        Assert.lesserThan(int(bytes(myTileContract.emoji()).length), int(10), "emoji is not too long");
     }
 
     function checkDescription () public {
-        Assert.greaterThan(int(bytes(stubTileContract.description()).length), int(0), "description is not empty");
+        Assert.greaterThan(int(bytes(myTileContract.description()).length), int(0), "description is not empty");
     }
 }
 `
@@ -67,7 +67,7 @@ const deployWithWeb3 = `// Right click on the script name and hit "Run" to execu
     try {
         console.log('Running deployWithWeb3 script...')
         
-        const contractName = 'Storage' // Change this for other contract
+        const contractName = 'MyTileContract' // Change this for other contract
         const constructorArgs = []    // Put constructor args (if any) here for your contract
     
         // Note that the script needs the ABI which is generated from the compilation artifact.
@@ -100,7 +100,7 @@ const deployWithEthers = `// Right click on the script name and hit "Run" to exe
     try {
         console.log('Running deployWithEthers script...')
     
-        const contractName = 'Storage' // Change this for other contract
+        const contractName = 'MyTileContract' // Change this for other contract
         const constructorArgs = []    // Put constructor args (if any) here for your contract
 
         // Note that the script needs the ABI which is generated from the compilation artifact.
@@ -125,30 +125,9 @@ const deployWithEthers = `// Right click on the script name and hit "Run" to exe
     }
 })()`
 
-const readme = `EXAMPLE PROJECT
-
-Remix example project is present when Remix loads for the very first time or there are no files existing in the File Explorer. 
-It contains 3 directories:
-
-1. 'contracts': Holds three contracts with different complexity level, denoted with number prefix in file name.
-2. 'scripts': Holds two scripts to deploy a contract. It is explained below.
-3. 'tests': Contains one test file for 'Ballot' contract with unit tests in Solidity.
-
-SCRIPTS
-
-The 'scripts' folder contains example async/await scripts for deploying the 'Storage' contract.
-For the deployment of any other contract, 'contractName' and 'constructorArgs' should be updated (along with other code if required). 
-Scripts have full access to the web3.js and ethers.js libraries.
-
-To run a script, right click on file name in the file explorer and click 'Run'. Remember, Solidity file must already be compiled.
-
-Output from script will appear in remix terminal.
-`
-
 module.exports = {
   tileContract: { name: 'contracts/TileContract.sol', content: tileContract },
   deployWithWeb3: { name: 'scripts/deploy_web3.js', content: deployWithWeb3 },
   deployWithEthers: { name: 'scripts/deploy_ethers.js', content: deployWithEthers },
   tileContract_test: { name: 'tests/TileContract_test.sol', content: tileContractTest },
-  readme: { name: 'README.txt', content: readme }
 }

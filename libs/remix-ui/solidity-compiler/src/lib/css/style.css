@@ -78,6 +78,11 @@
   line-height: 12px;
   text-transform: uppercase;
 }
+.remixui_compilerLowerLabel {
+  margin-bottom: 2px;
+  font-size: 10px;
+  line-height: 11px;
+}
 .remixui_copyButton {
   padding: 6px;
   font-weight: bold;

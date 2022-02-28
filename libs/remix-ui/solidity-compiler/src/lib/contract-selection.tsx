@@ -19,7 +19,7 @@ export const ContractSelection = (props: ContractSelectionProps) => {
     })) : []
 
     setContractList(contractList)
-    if (contractList.length) setSelectedContract(contractList[0].name)
+    if (contractList.length) setSelectedContract(contractList[contractList.length - 1].name)
   }, [contractMap, contractsDetails])
 
   const resetStorage = () => {
@@ -198,13 +198,14 @@ export const ContractSelection = (props: ContractSelectionProps) => {
           {/* Select Compiler Version */}
           <div className="mb-3">
             <label className="remixui_compilerLabel form-check-label" htmlFor="compiledContracts">Contract</label>
+            <label className="remixui_compilerLowerLabel form-check-label" htmlFor="compiledContracts"><p>When you are ready to deploy, press the button below to publish the ABI JSON to IPFS and populate the extended ABI function in your code</p></label>
             <select onChange={(e) => handleContractChange(e.target.value)} value={selectedContract} data-id="compiledContracts" id="compiledContracts" className="custom-select">
               { contractList.map(({ name, file }, index) => <option value={name} key={index}>{name} ({file})</option>)}
             </select>
           </div>
           <article className="mt-2 pb-0">
             <button id="publishOnIpfs" className="btn btn-secondary btn-block" title="Publish on Ipfs" onClick={() => { handlePublishToStorage('ipfs') }}>
-              <span>Publish on Ipfs</span>
+              <span>Publish &amp; Populate ABI JSON</span>
               <img id="ipfsLogo" className="remixui_storageLogo ml-2" src="assets/img/ipfs.webp" />
             </button>
             <button data-id="compilation-details" className="btn btn-secondary btn-block" title="Display Contract Details" onClick={() => { details() }}>
@@ -234,7 +235,7 @@ export const ContractSelection = (props: ContractSelectionProps) => {
           <span className="mt-2 mx-3 w-100 alert alert-warning" role="alert">No Contract Compiled Yet</span>
         </article></section>
       }
-      <PublishToStorage api={api} storage={storage} contract={contractsDetails[selectedContract]} filePath={selectedContract ? contractMap[selectedContract].file : undefined} resetStorage={resetStorage} compileTabLogic={compileTabLogic} />
+      <PublishToStorage api={api} storage={storage} contract={contractsDetails[selectedContract]} filePath={selectedContract && contractMap[selectedContract] ? contractMap[selectedContract].file : undefined} resetStorage={resetStorage} compileTabLogic={compileTabLogic} />
     </>
   )
 }

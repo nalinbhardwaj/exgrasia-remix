@@ -98,7 +98,7 @@ export function ContractDropdownUI (props: ContractDropdownProps) {
     if (contractList.length > 0) {
       const contract = contractList.find(contract => contract.alias === selectedContract)
 
-      if (!selectedContract || !contract) setSelectedContract(contractList[0].alias)
+      if (!selectedContract || !contract) setSelectedContract(contractList[contractList.length - 1].alias)
     }
   }
 
@@ -214,24 +214,6 @@ export function ContractDropdownUI (props: ContractDropdownProps) {
           { contractList.length <= 0 ? 'No compiled contracts'
             : loadedContractData ? <div>
               <ContractGUI title='Deploy' funcABI={constructorInterface} clickCallBack={clickCallback} inputs={constructorInputs} widthClass='w-50' evmBC={loadedContractData.bytecodeObject} lookupOnly={false} />
-              <div className="d-flex py-1 align-items-center custom-control custom-checkbox">
-                <input
-                  id="deployAndRunPublishToIPFS"
-                  data-id="contractDropdownIpfsCheckbox"
-                  className="form-check-input custom-control-input"
-                  type="checkbox"
-                  onChange={handleCheckedIPFS}
-                  checked={props.ipfsCheckedState}
-                />
-                <label
-                  htmlFor="deployAndRunPublishToIPFS"
-                  data-id="contractDropdownIpfsCheckboxLabel"
-                  className="m-0 form-check-label custom-control-label udapp_checkboxAlign"
-                  title="Publishing the source code and metadata to IPFS facilitates source code verification using Sourcify and will greatly foster contract adoption (auditing, debugging, calling it, etc...)"
-                >
-                  Publish to IPFS
-                </label>
-              </div>
             </div> : ''
           }
         </div>

@@ -275,7 +275,7 @@ export const RemixUiHomeTab = (props: RemixUiHomeTabProps) => {
         <div className="border-bottom d-flex flex-column mr-4 pb-3 mb-3">
           <div className="d-flex justify-content-between ">
             <div className="mx-4 my-4 d-flex">
-              <label style={ { fontSize: 'xxx-large', height: 'auto', alignSelf: 'flex-end' } }>Remix IDE</label>
+              <label style={ { fontSize: 'xxx-large', height: 'auto', alignSelf: 'flex-end' } }>Exgrasia Remix IDE</label>
             </div>
             <div className="mr-4 d-flex">
               <img className="mt-4 mb-2 remixui_home_logoImg" src="assets/img/guitarRemiCroped.webp" onClick={ () => playRemi() } alt=""></img>
@@ -288,27 +288,41 @@ export const RemixUiHomeTab = (props: RemixUiHomeTabProps) => {
             </div>
           </div>
           <div>
-            <i className="pl-4 text-danger fas fa-exclamation-triangle"></i>
-            <span className="px-2 remixui_home_text text-danger mt-4 pt-4">
-              Scam Alert: Beware of online videos promoting "liquidity front runner bots".
+          <i className="pl-4 fas fa-door-open"></i>
+            <span className="px-2 remixui_home_text mt-4 pt-4">
+              Welcome to the Exgrasia Remix IDE. This is a web-based IDE that simplifies development of Exgrasia Tile Contracts.
             </span>
-            <a className="remixui_home_text" target="__blank" href="https://medium.com/remix-ide/remix-in-youtube-crypto-scams-71c338da32d">Learn more</a>
           </div>
         </div>
         <div className="row mx-2 mr-4" data-id="landingPageHpSections">
           <div className="ml-3">
             <div className="mb-5">
-              <h4>Featured Plugins</h4>
-              <div className="d-flex flex-row pt-2">
-                <ThemeContext.Provider value={ state.themeQuality }>
-                  <PluginButton imgPath="assets/img/solidityLogo.webp" envID="solidityLogo" envText="Solidity" callback={() => startSolidity()} />
-                  <PluginButton imgPath="assets/img/starkNetLogo.webp" envID="starkNetLogo" envText="StarkNet" l2={true} callback={() => startStarkNet()} />
-                  <PluginButton imgPath="assets/img/solhintLogo.webp" envID="solhintLogo" envText="Solhint linter" callback={() => startSolhint()} />
-                  <PluginButton imgPath="assets/img/learnEthLogo.webp" envID="learnEthLogo" envText="LearnEth" callback={() => startLearnEth()} />
-                  <PluginButton imgPath="assets/img/sourcifyLogo.webp" envID="sourcifyLogo" envText="Sourcify" callback={() => startSourceVerify()} />
-                  <PluginButton imgPath="assets/img/moreLogo.webp" envID="moreLogo" envText="More" callback={startPluginManager} />
-                </ThemeContext.Provider>
-              </div>
+              <h2>Usage Guide</h2>
+              <br />
+              <h4>Deployment</h4>
+              <p>There are 3 steps in the deployment process:</p>
+              <ol>
+                <li>Compile the contract using the second icon in the left sidebar</li>
+                <li>When you are ready to deploy, push the ABI to IPFS and populate the IPFS hash in the Extended ABI field using the Populate button below the Compile button (in the second icon sidebar)</li>
+                <li>Finally, deploy the contract using the third icon in the left sidebar</li>
+              </ol>
+              <p>Ensure that the extended ABI function is populated before deploying the contract.</p>
+              <br />
+              <h4>Example</h4>
+              <p>When you first load up the IDE, you will see an example tile contract, alongside some helpful scripts. There are 3 directories:</p>
+              <ol>
+                <li>'contracts': Holds three contracts with different complexity level, denoted with number prefix in file name.</li>
+                <li>'scripts': Holds two scripts to deploy a contract. It is explained below.</li>
+                <li>'tests': Contains one test file for 'Ballot' contract with unit tests in Solidity.</li>
+              </ol>
+              <p>Ensure that the extended ABI function is populated before deploying the contract.</p>
+              <br />
+              <h4>Scripts</h4>
+              <p>The 'scripts' folder contains example async/await scripts for deploying the 'MyTileContract' contract.</p>
+              <p>For the deployment of any other contract, 'contractName' and 'constructorArgs' should be updated (along with other code if required).</p>
+              <p>Scripts have full access to the web3.js and ethers.js libraries. </p>
+              <p>To run a script, right click on file name in the file explorer and click 'Run'. Remember, Solidity file must already be compiled.</p>
+              <p>Output from script will appear in remix terminal.</p>
             </div>
             <div className="d-flex">
               <div className="file">

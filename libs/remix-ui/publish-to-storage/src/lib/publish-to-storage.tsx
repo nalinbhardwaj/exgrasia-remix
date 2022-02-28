@@ -46,12 +46,9 @@ export const PublishToStorage = (props: RemixUiPublishToStorageProps) => {
             api.writeFile('ipfs/' + result.item.hash, result.item.content)
 
             // throw in ABI into contract
-            console.log("contract: ", contract);
-            console.log("filePath: ", filePath);
-
             const solFile = await api.readFile(filePath);
-            const moddedSolFile = solFile.replace("ipfs.io/ipfs/AUTOGEN", "ipfs.io/ipfs/" + result.abi.hash);
-            api.writeFile(filePath, moddedSolFile);
+            const moddedSolFile = solFile.replace(/ipfs.io\/ipfs\/[A-Za-z0-9]+/i, "ipfs.io/ipfs/" + result.abi.hash);
+            await api.writeFile(filePath, moddedSolFile);
 
             const hhCompilation = api.getAppParameter('hardhat-compilation');
             compileTabLogic.runCompiler(hhCompilation);

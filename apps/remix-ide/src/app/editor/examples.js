@@ -4,6 +4,11 @@ const tileContract = `// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.4;
 
+import "./TinyWorld.sol";
+import "./Types.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+
 interface ITileContract {
     function tileEmoji(Coords memory coords) external view returns (string memory);
 
@@ -14,8 +19,147 @@ interface ITileContract {
     function tileABI(Coords memory coords) external view returns (string memory);
 }
 
+
+abstract contract TinyERC20 is ERC20Burnable, ITileContract {
+    TinyWorld connectedWorld;
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        TinyWorld _connectedWorld
+    ) ERC20(name_, symbol_) {
+        connectedWorld = _connectedWorld;
+    }
+
+    function isContract(address addr) internal view returns (bool) {
+        return addr.code.length > 0;
+    }
+
+    function getAddressOrContractLocations(address addr) internal view returns (Coords[] memory) {
+        if (isContract(addr)) {
+            return connectedWorld.getContractLocations(addr);
+        } else {
+            require(connectedWorld.playerInited(addr), "addr is not an exgrasia player");
+            Coords[] memory ret = new Coords[](1);
+            ret[0] = connectedWorld.getPlayerLocation(addr);
+            return ret;
+        }
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._beforeTokenTransfer(from, to, amount);
+        if (from == address(0) || to == address(0)) return;
+        Coords[] memory fromLocations = getAddressOrContractLocations(from);
+        Coords[] memory toLocations = getAddressOrContractLocations(to);
+        bool satisfactory = false;
+        for (uint256 i = 0; i < fromLocations.length; i++) {
+            for (uint256 j = 0; j < toLocations.length; j++) {
+                if (connectedWorld.dist(fromLocations[i], toLocations[j]) <= 1) {
+                    satisfactory = true;
+                    break;
+                }
+            }
+            if (satisfactory) break;
+        }
+        require(satisfactory, "Transfer is only allowed between adjacent tiles");
+    }
+
+    function mint(address to, uint256 count) public virtual;
+
+    function approveAll(address aprovee) public {
+        super.approve(aprovee, 2**250);
+    }
+
+    function tileEmoji(Coords memory coords) external view override returns (string memory) {
+        return unicode"💰";
+    }
+
+    function tileName(Coords memory coords) external view override returns (string memory) {
+        return string(abi.encodePacked("Stack of ", ERC20.name(), " (", ERC20.symbol(), ")"));
+    }
+
+    function tileDescription(Coords memory coords) external view override returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    "This is a stack of ",
+                    ERC20.name(),
+                    " (",
+                    ERC20.symbol(),
+                    "). You can use this to manage and authorise access to your tokens for different contracts."
+                )
+            );
+    }
+
+    function tileABI(Coords memory coords) external view virtual override returns (string memory) {
+        return
+            "https://gist.githubusercontent.com/nalinbhardwaj/ef20a647b07d1796cca88745d0d4bf95/raw/ea69052ba9c70f6574ba5d19c29193b1fa183c61/TinyERC20.json";
+    }
+}
+
+abstract contract TinyERC721 is ERC721Enumerable {
+    TinyWorld connectedWorld;
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        TinyWorld _connectedWorld
+    ) ERC721(name_, symbol_) {
+        connectedWorld = _connectedWorld;
+    }
+
+    function isContract(address addr) internal view returns (bool) {
+        return addr.code.length > 0;
+    }
+
+    function getAddressOrContractLocations(address addr) internal view returns (Coords[] memory) {
+        if (isContract(addr)) {
+            return connectedWorld.getContractLocations(addr);
+        } else {
+            require(connectedWorld.playerInited(addr), "addr is not an exgrasia player");
+            Coords[] memory ret = new Coords[](1);
+            ret[0] = connectedWorld.getPlayerLocation(addr);
+            return ret;
+        }
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._beforeTokenTransfer(from, to, amount);
+        if (from == address(0) || to == address(0)) return;
+        Coords[] memory fromLocations = getAddressOrContractLocations(from);
+        Coords[] memory toLocations = getAddressOrContractLocations(to);
+        bool satisfactory = false;
+        for (uint256 i = 0; i < fromLocations.length; i++) {
+            for (uint256 j = 0; j < toLocations.length; j++) {
+                if (connectedWorld.dist(fromLocations[i], toLocations[j]) <= 1) {
+                    satisfactory = true;
+                    break;
+                }
+            }
+            if (satisfactory) break;
+        }
+        require(satisfactory, "Transfer is only allowed between adjacent tiles");
+    }
+}`
+
+const myTileContract = `// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.4;
+
+import "./TinyWorld.sol";
+import "./TinyWorldRegistry.sol";
+import "./TileContract.sol";
+
 contract CampFire is ITileContract {
-    TinyWorld connectedWorld = TinyWorld(0x8511d8a283bfC25c7173850d88698599456b9669);
+    TinyWorld connectedWorld = TinyWorld(0xfD34A44eDE85F801a74046ED287227985Ef7cE40);
 
     function tileEmoji(Coords memory coords) external view override returns (string memory) {
         return unicode"🏕️";
@@ -41,520 +185,67 @@ contract CampFire is ITileContract {
     }
 }`
 
-const tinyWorld = `// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.4;
-
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
-import "./TinyWorldStorage.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "hardhat/console.sol";
-import "abdk-libraries-solidity/ABDKMath64x64.sol";
-import "./TinyWorldRegistry.sol";
-
-contract TinyWorld is OwnableUpgradeable, TinyWorldStorage {
-    event PlayerUpdated(address, Coords);
-    event TileUpdated(Tile);
-    TinyWorldRegistry public registry;
-
-    function initialize(
-        uint256 _seed,
-        uint256 _worldWidth,
-        uint256 _worldScale,
-        address _registryAddress
-    ) public initializer {
-        __Ownable_init();
-        seed = _seed;
-        worldWidth = _worldWidth;
-        worldScale = _worldScale;
-        perlinMax = 64;
-        vecsDenom = 1000;
-        vecs = [
-            [int16(1000), int16(0)],
-            [int16(923), int16(382)],
-            [int16(707), int16(707)],
-            [int16(382), int16(923)],
-            [int16(0), int16(1000)],
-            [int16(-383), int16(923)],
-            [int16(-708), int16(707)],
-            [int16(-924), int16(382)],
-            [int16(-1000), int16(0)],
-            [int16(-924), int16(-383)],
-            [int16(-708), int16(-708)],
-            [int16(-383), int16(-924)],
-            [int16(-1), int16(-1000)],
-            [int16(382), int16(-924)],
-            [int16(707), int16(-708)],
-            [int16(923), int16(-383)]
-        ];
-        validPlayerEmoji["monkey"] = unicode"🐵";
-        validPlayerEmoji["bear"] = unicode"🐻";
-        validPlayerEmoji["frog"] = unicode"🐸";
-        validPlayerEmoji["dog"] = unicode"🐶";
-        validPlayerEmoji["cat"] = unicode"🐱";
-        validPlayerEmoji["mouse"] = unicode"🐭";
-
-        registry = TinyWorldRegistry(address(_registryAddress));
-    }
-
-    // Perlin Noise
-    // interpolation function [0,1] -> [0,1]
-    function smoothStep(int128 x) public pure returns (int128) {
-        return x;
-    }
-
-    // returns a random unit vector
-    // implicit denominator of vecsDenom
-    function getGradientAt(
-        uint32 x,
-        uint32 y,
-        uint32 scale,
-        uint32 seed
-    ) public view returns (int16[2] memory) {
-        uint256 idx = uint256(keccak256(abi.encodePacked(x, y, scale, seed))) % 16;
-        return vecs[idx];
-    }
-
-    // the computed perlin value at a point is a weighted average of dot products with
-    // gradient vectors at the four corners of a grid square.
-    // this isn't scaled; there's an implicit denominator of scale ** 2
-    function getWeight(
-        uint32 cornerX,
-        uint32 cornerY,
-        uint32 x,
-        uint32 y,
-        uint32 scale
-    ) public pure returns (uint64) {
-        uint64 res = 1;
-
-        if (cornerX > x) res *= (scale - (cornerX - x));
-        else res *= (scale - (x - cornerX));
-
-        if (cornerY > y) res *= (scale - (cornerY - y));
-        else res *= (scale - (y - cornerY));
-
-        return res;
-    }
-
-    function getCorners(
-        uint32 x,
-        uint32 y,
-        uint32 scale
-    ) public pure returns (uint32[2][4] memory) {
-        uint32 lowerX = (x / scale) * scale;
-        uint32 lowerY = (y / scale) * scale;
-
-        return [
-            [lowerX, lowerY],
-            [lowerX + scale, lowerY],
-            [lowerX + scale, lowerY + scale],
-            [lowerX, lowerY + scale]
-        ];
-    }
-
-    function getSingleScalePerlin(
-        uint32 x,
-        uint32 y,
-        uint32 scale,
-        uint32 seed
-    ) public view returns (int128) {
-        uint32[2][4] memory corners = getCorners(x, y, scale);
-
-        int128 resNumerator = 0;
-
-        for (uint8 i = 0; i < 4; i++) {
-            uint32[2] memory corner = corners[i];
-
-            // this has an implicit denominator of scale
-            int32[2] memory offset = [int32(x) - int32(corner[0]), int32(y) - int32(corner[1])];
-
-            // this has an implicit denominator of vecsDenom
-            int16[2] memory gradient = getGradientAt(corner[0], corner[1], scale, seed);
-
-            // this has an implicit denominator of vecsDenom * scale
-            int64 dot = offset[0] * int64(gradient[0]) + offset[1] * int64(gradient[1]);
-
-            // this has an implicit denominator of scale ** 2
-            uint64 weight = getWeight(corner[0], corner[1], x, y, scale);
-
-            // this has an implicit denominator of vecsDenom * scale ** 3
-            resNumerator += int128(int64(weight)) * int128(dot);
-        }
-
-        return
-            ABDKMath64x64.divi(int256(resNumerator), int256(vecsDenom) * int256(int32(scale))**3);
-    }
-
-    function computePerlin(
-        uint32 x,
-        uint32 y,
-        uint32 seed,
-        uint32 scale
-    ) public view returns (uint256) {
-        int128 perlin = ABDKMath64x64.fromUInt(0);
-
-        for (uint8 i = 0; i < 3; i++) {
-            int128 v = getSingleScalePerlin(x, y, scale * uint32(2**i), seed);
-            perlin = ABDKMath64x64.add(perlin, v);
-        }
-        perlin = ABDKMath64x64.add(perlin, getSingleScalePerlin(x, y, scale * uint32(2**0), seed));
-
-        perlin = ABDKMath64x64.div(perlin, ABDKMath64x64.fromUInt(4));
-        int128 perlinScaledShifted = ABDKMath64x64.add(
-            ABDKMath64x64.mul(perlin, ABDKMath64x64.fromUInt(uint256(perlinMax / 2))),
-            ABDKMath64x64.fromUInt((uint256(perlinMax / 2)))
-        );
-
-        return ABDKMath64x64.toUInt(perlinScaledShifted);
-    }
-
-    // Map parametrisation
-    function getRaritySeed(Coords memory coords) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(coords.x, coords.y))) % 8;
-    }
-
-    function coordsToTile(Coords memory coords) private view returns (Tile memory) {
-        uint256 perlin1 = computePerlin(
-            uint32(coords.x),
-            uint32(coords.y),
-            uint32(seed),
-            uint32(worldScale)
-        );
-        uint256 perlin2 = computePerlin(
-            uint32(coords.x),
-            uint32(coords.y),
-            uint32(seed + 1),
-            uint32(worldScale)
-        );
-        uint256 raritySeed = getRaritySeed(coords);
-
-        uint256 height = perlin1;
-        uint256 temperature = perlin2;
-        temperature = uint256(int256(temperature) + (int256(coords.x) - 50) / 2);
-
-        AltitudeType altitudeType = AltitudeType.SEA;
-        if (height > 40) {
-            altitudeType = AltitudeType.MOUNTAINTOP;
-        } else if (height > 37) {
-            altitudeType = AltitudeType.MOUNTAIN;
-        } else if (height > 32) {
-            altitudeType = AltitudeType.LAND;
-        } else if (height > 30) {
-            altitudeType = AltitudeType.BEACH;
-        }
-
-        TemperatureType temperatureType = TemperatureType.COLD;
-        if (temperature > 42) {
-            temperatureType = TemperatureType.HOT;
-        } else if (temperature > 22) {
-            temperatureType = TemperatureType.NORMAL;
-        }
-
-        TileType tileType = TileType.UNKNOWN;
-        if (temperatureType == TemperatureType.COLD) {
-            if (altitudeType == AltitudeType.MOUNTAINTOP) {
-                tileType = TileType.SNOW;
-            } else if (altitudeType == AltitudeType.MOUNTAIN) {
-                tileType = TileType.SNOW;
-            } else if (altitudeType == AltitudeType.LAND) {
-                tileType = TileType.SNOW;
-            } else if (altitudeType == AltitudeType.BEACH) {
-                tileType = TileType.SNOW;
-            } else {
-                tileType = TileType.WATER;
-            }
-        } else if (temperatureType == TemperatureType.NORMAL) {
-            if (altitudeType == AltitudeType.MOUNTAINTOP) {
-                tileType = TileType.SNOW;
-            } else if (altitudeType == AltitudeType.MOUNTAIN) {
-                tileType = TileType.STONE;
-            } else if (altitudeType == AltitudeType.LAND) {
-                tileType = TileType.GRASS;
-            } else if (altitudeType == AltitudeType.BEACH) {
-                tileType = TileType.SAND;
-            } else {
-                tileType = TileType.WATER;
-            }
-        } else {
-            if (altitudeType == AltitudeType.MOUNTAINTOP) {
-                tileType = TileType.STONE;
-            } else if (altitudeType == AltitudeType.MOUNTAIN) {
-                tileType = TileType.SAND;
-            } else if (altitudeType == AltitudeType.LAND) {
-                tileType = TileType.SAND;
-            } else if (altitudeType == AltitudeType.BEACH) {
-                tileType = TileType.SAND;
-            } else {
-                tileType = TileType.WATER;
-            }
-        }
-
-        return
-            Tile({
-                coords: coords,
-                perlin: [perlin1, perlin2],
-                raritySeed: raritySeed,
-                tileType: tileType,
-                temperatureType: temperatureType,
-                altitudeType: altitudeType,
-                owner: address(0),
-                smartContract: address(0),
-                lastPurchased: 0
-            });
-    }
-
-    // Mapping
-    function getTile(Coords memory coords) public returns (Tile memory) {
-        if (cachedTiles[coords.x][coords.y].tileType == TileType.UNKNOWN) {
-            cachedTiles[coords.x][coords.y] = coordsToTile(coords);
-            touchedCoords.push(coords);
-        }
-        return cachedTiles[coords.x][coords.y];
-    }
-
-    // Movement
-    function getInitSeedCoords() private view returns (Coords memory coords) {
-        uint256 x = (uint256(
-            keccak256(
-                abi.encodePacked(
-                    uint256(uint160(address(msg.sender))),
-                    uint256(seed),
-                    uint256(block.timestamp)
-                )
-            )
-        ) % 8);
-        uint256 y = (uint256(
-            keccak256(
-                abi.encodePacked(
-                    uint256(uint160(address(msg.sender))),
-                    uint256(seed + 42),
-                    uint256(block.timestamp)
-                )
-            )
-        ) % worldWidth);
-        return Coords(worldWidth - x - 1, worldWidth - y - 1);
-    }
-
-    function abs(int256 x) private pure returns (uint256) {
-        return uint256(x >= 0 ? x : -x);
-    }
-
-    function dist(Coords memory a, Coords memory b) public pure returns (uint256) {
-        return abs(int256(a.x) - int256(b.x)) + abs(int256(a.y) - int256(b.y));
-    }
-
-    modifier isClose(Coords memory loc) {
-        require(playerInited[msg.sender], "Player not inited");
-        require(dist(playerLocation[msg.sender], loc) <= 1, "Location too far");
-        _;
-    }
-
-    modifier isInBounds(Coords memory loc) {
-        require(playerInited[msg.sender], "Player not inited");
-        require(loc.x >= 1 && loc.x < worldWidth, "X out of bounds");
-        require(loc.y >= 1 && loc.y < worldWidth, "Y out of bounds");
-        _;
-    }
-
-    function initPlayerLocation(string memory repr) public {
-        require(registry.getRealAddress(msg.sender) != address(0), "Player not registered");
-        require(playerInited[msg.sender] == false, "Already inited");
-        require(bytes(validPlayerEmoji[repr]).length > 0, "Invalid emoji");
-        Coords memory coords = getInitSeedCoords();
-
-        playerLocation[msg.sender] = coords;
-        playerInited[msg.sender] = true;
-        playerEmoji[msg.sender] = validPlayerEmoji[repr];
-        playerIds.push(msg.sender);
-        emit PlayerUpdated(msg.sender, coords);
-    }
-
-    function movePlayer(Coords memory coords) public isClose(coords) isInBounds(coords) {
-        playerLocation[msg.sender] = coords;
-        emit PlayerUpdated(msg.sender, coords);
-    }
-
-    function checkInterfaceFunction(address smartContract, bytes memory payload) internal view {
-        (bool success, bytes memory returnData) = smartContract.staticcall(payload);
-        require(success, "Failed to static call required function");
-    }
-
-    function checkInterface(address smartContract) internal view {
-        checkInterfaceFunction(
-            smartContract,
-            abi.encodeWithSignature("tileEmoji(Coords memory coords)", Coords(1, 1))
-        );
-        checkInterfaceFunction(
-            smartContract,
-            abi.encodeWithSignature("tileName(Coords memory coords)", Coords(1, 1))
-        );
-        checkInterfaceFunction(
-            smartContract,
-            abi.encodeWithSignature("tileDescription(Coords memory coords)", Coords(1, 1))
-        );
-        checkInterfaceFunction(
-            smartContract,
-            abi.encodeWithSignature("tileABI(Coords memory coords)", Coords(1, 1))
-        );
-    }
-
-    function ownTile(Coords memory coords, address smartContract)
-        public
-        isClose(coords)
-        isInBounds(coords)
-    {
-        Tile memory tile = getTile(coords);
-        require(
-            block.timestamp - tile.lastPurchased > 3 hours || tile.owner == msg.sender,
-            "Tile already owned"
-        );
-        tile.smartContract = smartContract;
-        tile.lastPurchased = block.timestamp;
-        tile.owner = msg.sender;
-        cachedTiles[coords.x][coords.y] = tile;
-        emit TileUpdated(tile);
-    }
-
-    function transferTile(Coords memory coords, address newOwner)
-        public
-        isClose(coords)
-        isInBounds(coords)
-    {
-        Tile memory tile = getTile(coords);
-        require(
-            block.timestamp - tile.lastPurchased <= 3 hours && tile.owner == msg.sender,
-            "Tile not owned"
-        );
-        tile.owner = newOwner;
-        cachedTiles[coords.x][coords.y] = tile;
-        emit TileUpdated(tile);
-    }
-
-    function forceTileUpdate(Coords memory coords) public {
-        Tile memory tile = getTile(coords);
-        require(tile.smartContract == msg.sender, "Not owner");
-        emit TileUpdated(tile);
-    }
-}
-`
-
-const tinyWorldStorage = `// SPDX-License-Identifier: UNLICENSED
+const tinyWorld = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
 import "./Types.sol";
 
-contract TinyWorldStorage {
-    uint256 public seed;
-    uint256 public worldWidth;
-    uint256 public worldScale;
-    int16[2][16] public vecs;
-    int16 public vecsDenom;
-    uint16 public perlinMax;
-    address[] public playerIds;
-
-    mapping(uint256 => mapping(uint256 => Tile)) public cachedTiles;
-    Coords[] public touchedCoords;
-
-    mapping(address => Coords) public playerLocation;
-    mapping(address => bool) public playerInited;
-    mapping(address => string) public playerEmoji;
-
-    mapping(string => string) public validPlayerEmoji;
-
-    function getCachedTile(Coords memory coords) public view returns (Tile memory) {
-        return cachedTiles[coords.x][coords.y];
-    }
-
-    function getTouchedTiles() public view returns (Tile[] memory) {
-        Tile[] memory touchedTiles = new Tile[](touchedCoords.length);
-        for (uint256 i = 0; i < touchedCoords.length; i++) {
-            touchedTiles[i] = getCachedTile(touchedCoords[i]);
-        }
-        return touchedTiles;
-    }
-
-    function getPlayerIds() public view returns (address[] memory) {
-        return playerIds;
-    }
-
-    function getPlayerInfos() public view returns (Coords[] memory, string[] memory) {
-        Coords[] memory retLoc = new Coords[](playerIds.length);
-        string[] memory retEmoji = new string[](playerIds.length);
-        for (uint256 i = 0; i < playerIds.length; i++) {
-            retLoc[i] = playerLocation[playerIds[i]];
-            retEmoji[i] = playerEmoji[playerIds[i]];
-        }
-        return (retLoc, retEmoji);
-    }
-
-    function getPlayerLocation(address player) public view returns (Coords memory) {
-        return playerLocation[player];
-    }
+interface TinyWorld {
+    function addWhitelistedContracts ( address[] memory smartContracts ) external;
+    function cachedTiles ( uint256, uint256 ) external view returns ( Coords memory coords, uint256 raritySeed, uint8 tileType, uint8 temperatureType, uint8 altitudeType, address owner, address smartContract, uint256 lastPurchased );
+    function canMoveSnow ( address ) external view returns ( bool );
+    function canMoveWater ( address ) external view returns ( bool );
+    function canPutAnything ( address ) external view returns ( bool );
+    function dist ( Coords memory a, Coords memory b ) external pure returns ( uint256 );
+    function forceTileUpdate ( Coords memory coords ) external;
+    function getCachedTile ( Coords memory coords ) external view returns ( Coords memory );
+    function getContractLocations ( address contractAddress ) external view returns ( Coords[] memory );
+    function getPlayerIds (  ) external view returns ( address[] memory );
+    function getPlayerInfos (  ) external view returns ( Coords[] memory, string[] memory, bool[] memory, bool[] memory, bool[] memory );
+    function getPlayerLocation ( address player ) external view returns ( Coords memory );
+    function getTile ( Coords memory coords ) external returns ( Coords memory );
+    function getTouchedTiles (  ) external view returns ( Coords[] memory );
+    function initPlayerLocation ( string memory repr ) external;
+    function initialize ( uint256 _seed, uint256 _worldWidth, uint256 _worldScale, address _registryAddress, address[] memory _admins ) external;
+    function isAdmin ( address ) external view returns ( bool );
+    function movePlayer ( Coords memory coords ) external;
+    function ownTile ( Coords memory coords, address smartContract ) external;
+    function owner (  ) external view returns ( address );
+    function perlinMax (  ) external view returns ( uint16 );
+    function playerEmoji ( address ) external view returns ( string memory );
+    function playerIds ( uint256 ) external view returns ( address );
+    function playerInited ( address ) external view returns ( bool );
+    function playerLocation ( address ) external view returns ( uint256 x, uint256 y );
+    function registry (  ) external view returns ( address );
+    function renounceOwnership (  ) external;
+    function seed (  ) external view returns ( uint256 );
+    function setCanMoveSnow ( address player, bool canMove ) external;
+    function setCanMoveWater ( address player, bool canMove ) external;
+    function setCanPutAnything ( address player, bool canPut ) external;
+    function setQuestMaster ( address master ) external;
+    function touchedCoords ( uint256 ) external view returns ( uint256 x, uint256 y );
+    function transferOwnership ( address newOwner ) external;
+    function transferTile ( Coords memory coords, address newOwner ) external;
+    function validPlayerEmoji ( string memory ) external view returns ( string memory );
+    function vecs ( uint256, uint256 ) external view returns ( int16 );
+    function vecsDenom (  ) external view returns ( int16 );
+    function whitelistedContracts ( uint256 ) external view returns ( address );
+    function worldScale (  ) external view returns ( uint256 );
+    function worldWidth (  ) external view returns ( uint256 );
 }
+
 `
 
-const tinyWorldRegistry = `// SPDX-License-Identifier: UNLICENSED
+const tinyWorldRegistry = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-contract TinyWorldRegistry {
-    address admin;
-    address[] registeredRealAddresses;
-    mapping(address => address) public realAddressToProxyAddress;
-    mapping(address => address) public proxyAddressToRealAddress;
-
-    constructor() {
-        admin = msg.sender;
-    }
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin);
-        _;
-    }
-
-    function setProxyAddress(address _proxyAddress) public {
-        require(realAddressToProxyAddress[msg.sender] == address(0), "Proxy address already set");
-        require(proxyAddressToRealAddress[_proxyAddress] == address(0), "Real address already set");
-        realAddressToProxyAddress[msg.sender] = _proxyAddress;
-        proxyAddressToRealAddress[_proxyAddress] = msg.sender;
-        registeredRealAddresses.push(msg.sender);
-    }
-
-    // DELETE BEFORE DEPLOY
-    // function dummySetProxyAddress(address[] memory realAddresses, address proxyAddress) public {
-    //     for (uint256 i = 0; i < realAddresses.length; i++) {
-    //         address realAddress = realAddresses[i];
-    //         require(
-    //             realAddressToProxyAddress[realAddress] == address(0),
-    //             "Proxy address already set"
-    //         );
-    //         require(
-    //             proxyAddressToRealAddress[proxyAddress] == address(0),
-    //             "Real address already set"
-    //         );
-    //         realAddressToProxyAddress[realAddress] = proxyAddress;
-    //         proxyAddressToRealAddress[proxyAddress] = realAddress;
-    //         registeredRealAddresses.push(realAddress);
-    //     }
-    // }
-
-    function getProxyAddress(address _realAddress) public view returns (address) {
-        return realAddressToProxyAddress[_realAddress];
-    }
-
-    function getRealAddress(address _proxyAddress) public view returns (address) {
-        return proxyAddressToRealAddress[_proxyAddress];
-    }
-
-    function getPlayerInfos() public view returns (address[] memory, address[] memory) {
-        address[] memory realAddresses = new address[](registeredRealAddresses.length);
-        address[] memory proxyAddresses = new address[](registeredRealAddresses.length);
-        for (uint256 i = 0; i < registeredRealAddresses.length; i++) {
-            address realAddress = registeredRealAddresses[i];
-            realAddresses[i] = realAddress;
-            proxyAddresses[i] = realAddressToProxyAddress[realAddress];
-        }
-        return (proxyAddresses, realAddresses);
-    }
+interface TinyWorldRegistry {
+    function getPlayerInfos (  ) external view returns ( address[] memory, address[] memory );
+    function getProxyAddress ( address _realAddress ) external view returns ( address );
+    function getRealAddress ( address _proxyAddress ) external view returns ( address );
+    function proxyAddressToRealAddress ( address ) external view returns ( address );
+    function realAddressToProxyAddress ( address ) external view returns ( address );
+    function setProxyAddress ( address _proxyAddress ) external;
 }
 `
 
@@ -606,6 +297,7 @@ struct Coords {
     uint256 x;
     uint256 y;
 }
+
 `
 
 const tileContractTest = `// SPDX-License-Identifier: MIT
@@ -702,9 +394,9 @@ const deployWithEthers = `// Right click on the script name and hit "Run" to exe
 })()`
 
 module.exports = {
+  myTileContract: { name: 'contracts/MyTileContract.sol', content: myTileContract },
   tileContract: { name: 'contracts/TileContract.sol', content: tileContract },
   tinyWorldContract: { name: 'contracts/TinyWorld.sol', content: tinyWorld },
-  tinyWorldStorageContract: { name: 'contracts/TinyWorldStorage.sol', content: tinyWorldStorage },
   tinyWorldRegistryContract: { name: 'contracts/TinyWorldRegistry.sol', content: tinyWorldRegistry },
   TypesContract: { name: 'contracts/Types.sol', content: types },
   deployWithWeb3: { name: 'scripts/deploy_web3.js', content: deployWithWeb3 },

@@ -47,7 +47,7 @@ export const PublishToStorage = (props: RemixUiPublishToStorageProps) => {
 
             // throw in ABI into contract
             const solFile = await api.readFile(filePath);
-            const moddedSolFile = solFile.replace(/ipfs.io\/ipfs\/[A-Za-z0-9]+/i, "ipfs.io/ipfs/" + result.abi.hash);
+            const moddedSolFile = solFile.replace(/exgrasia.infura-ipfs.io\/ipfs\/[A-Za-z0-9]+/i, "exgrasia.infura-ipfs.io/ipfs/" + result.abi.hash);
             await api.writeFile(filePath, moddedSolFile);
 
             const hhCompilation = api.getAppParameter('hardhat-compilation');

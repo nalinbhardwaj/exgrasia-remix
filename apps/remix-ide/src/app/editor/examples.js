@@ -159,7 +159,7 @@ import "./TinyWorldRegistry.sol";
 import "./TileContract.sol";
 
 contract CampFire is ITileContract {
-    TinyWorld connectedWorld = TinyWorld(0xfD34A44eDE85F801a74046ED287227985Ef7cE40);
+    TinyWorld connectedWorld = TinyWorld(0x0583f380BDa6C1b97029BF1a95C757329b5Ba3B3);
 
     function tileEmoji(Coords memory coords) external view override returns (string memory) {
         return unicode"🏕️";
